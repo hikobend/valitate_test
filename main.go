@@ -1,70 +1,35 @@
 package main
 
 import (
-	"database/sql"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator"
+	"github.com/go-playground/validator/v10"
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type User_JSON struct { // JSON
-	First string `json:"first"`
-	Last  string `json:"last"`
-	Age   int    `json:"age"`
-	Email string `json:"email"`
-}
-
-type User struct {
-	Id        int
-	FirstName string `validate:"required"`       //必須パラメータ
-	LastName  string `validate:"required"`       //必須パラメータ
-	Age       uint8  `validate:"gte=0,lt=130"`   // 0以上、130未満
-	Email     string `validate:"required,email"` //必須パラメータ、かつ、emailフォーマット
+type JsonRequest struct {
+	FieldStr  string `json:"field_str"`
+	FieldInt  int    `json:"field_int" validate:"gte=0,lt=130"`
+	FieldBool bool   `json:"field_bool"`
 }
 
 func main() {
-	// //バリデーション対象のデータをセット
-	// user := &User{
-	// 	FirstName: "Badger",
-	// 	LastName:  "Smith",
-	// 	Age:       135,
-	// 	Email:     "Badger.Smithgmail.com",
-	// }
-	// validate := validator.New()     //インスタンス生成
-	// errors := validate.Struct(user) //バリデーションを実行し、NGの場合、ここでエラーが返る。
-	// log.Fatalln(errors)
-
 	r := gin.Default()
-	r.POST("/create", Insert)
+	validate := validator.New() //インスタンス生成
+	r.POST("/postjson", func(c *gin.Context) {
+		var json JsonRequest
+		errors := validate.Struct(json) //バリデーションを実行し、NGの場合、ここでエラーが返る。
+		if errors != nil {
+			log.Fatal(errors)
+		}
+		if err := c.ShouldBindJSON(&json); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"str": json.FieldStr, "int": json.FieldInt, "bool": json.FieldBool})
+	})
 
 	r.Run()
-}
-
-func Insert(c *gin.Context) {
-	validate := validator.New() //インスタンス生成
-
-	db, err := sql.Open("mysql", "root:password@(localhost:3306)/local?parseTime=true")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	var user User_JSON
-	// user := &User{
-	// 	FirstName: "Badger",
-	// 	LastName:  "Smith",
-	// 	Age:       135,
-	// 	Email:     "Badger.Smithgmail.com",
-	// }
-
-	c.ShouldBindJSON(&user)
-
-	insert, err := db.Prepare("INSERT INTO user(first, last, age, email) VALUES (?, ?, ?, ?)")
-	if err != nil {
-		log.Fatal(err)
-	}
-	insert.Exec(validate.user.First, validate.user.Last, validate.user.Age, validate.user.Email)
-
 }
