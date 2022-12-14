@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator"
 	_ "github.com/go-sql-driver/mysql"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 type User struct {
@@ -29,14 +29,15 @@ func Insert(c *gin.Context) {
 	}
 	defer db.Close()
 
-	//バリデーション対象のデータをセット
-	var user User
-	validate := validator.New()  //インスタンス生成
+	var user User               // ここでは空
+	validate := validator.New() //インスタンス生成
+
+	c.ShouldBindJSON(&user) // BodyをUserという変数に入れる。
+
 	err = validate.Struct(&user) //バリデーションを実行し、NGの場合、ここでエラーが返る。
 	if err != nil {
 		log.Fatal(err)
 	}
-	// c.ShouldBindJSON(&user)
 
 	insert, err := db.Prepare("INSERT INTO users(first, last) VALUES (?, ?)")
 	if err != nil {
