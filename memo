@@ -12,3 +12,8 @@ CREATE TABLE `users` (
 	`first` text not null,
 	`last` text not null,
 );
+
+CREATE TABLE `date` (
+	`id` int  AUTO_INCREMENT PRIMARY KEY,
+	`date` date,
+);
